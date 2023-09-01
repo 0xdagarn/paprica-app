@@ -2,10 +2,10 @@ import Config
 
 # Configure your database
 config :paprica, Paprica.Repo,
-  username: "postgres",
-  password: "postgres",
+  username: "sgnoo",
+  password: "",
   hostname: "localhost",
-  database: "paprica_dev",
+  database: "paprica_dev_v1",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
