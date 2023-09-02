@@ -30,7 +30,7 @@ defmodule PapricaWeb.MessagesLive do
     IO.inspect(presences, label: "presences!")
 
     # wallet
-    socket = assign(socket, connected: false, address: nil)
+    socket = assign(socket, connected: false, address: nil, chainId: nil, balance: nil)
 
     # IO.inspect(socket, label: "socket")
 
@@ -43,6 +43,8 @@ defmodule PapricaWeb.MessagesLive do
       <span id="metamask" phx-hook="Metamask">
         <%= if @connected do %>
           <span>My account</span>: <span><%= @address %></span>
+          <span>chainId</span>: <span><%= @chainId %></span>
+          <span>balance</span>: <span><%= @balance %> ETH</span>
         <% else %>
           <.button phx-click="connect-wallet">
             <span>Connect</span>
@@ -106,16 +108,16 @@ defmodule PapricaWeb.MessagesLive do
       |> Map.put("country", "KOR")
     IO.inspect(message, label: "message")
 
-    case Messages.create_message(message) do
-      {:ok, _message} ->
-        changeset = Messages.change_message(%Message{})
-        IO.inspect(changeset, label: "changeset")
+    # case Messages.create_message(message) do
+    #   {:ok, _message} ->
+    #     changeset = Messages.change_message(%Message{})
+    #     IO.inspect(changeset, label: "changeset")
 
-        {:noreply, assign(socket, form: to_form(changeset))}
+    #     {:noreply, assign(socket, form: to_form(changeset))}
 
-      {:error, changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
-    end
+    #   {:error, changeset} ->
+    #     {:noreply, assign(socket, form: to_form(changeset))}
+    # end
   end
 
   def handle_info({:message_created, message}, socket) do
@@ -158,27 +160,28 @@ defmodule PapricaWeb.MessagesLive do
     assign(socket, :presences, presences)
   end
 
-  def handle_event("wallet-connected", %{"address" => address}, socket) do
-    IO.inspect(address, label: "wallet-connected")
+  def handle_event("wallet-connected", params, socket) do
+    address = params["address"]
 
     {:ok, _} =
       Presence.track(self(), @topic, address, %{
         address: address
-        # is_playing: false
       })
-
-      IO.inspect(address, label: "wallet-connected2")
 
     presences = Presence.list(@topic)
     socket = assign(socket, :presences, presences)
 
-    IO.inspect(presences, label: "wallet-presences")
+    # message = Map.new()
+    #   |> Map.put("text", "Welcome, " <> address)
+    # Messages.create_message(message)
 
-    message = Map.new()
-      |> Map.put("text", "Welcome, " <> address)
-    Messages.create_message(message)
-
-    {:noreply, assign(socket, connected: true, address: address)}
+    {:noreply, assign(
+      socket,
+      connected: true,
+      address: address,
+      chainId: params["chainId"],
+      balance: params["balance"]
+    )}
   end
 
   def handle_event("connect-wallet", _params, socket) do

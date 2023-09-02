@@ -33,7 +33,9 @@ defmodule PapricaWeb.StreamLive do
         IO.inspect(presences, label: "presences!")
 
         # wallet
-        socket = assign(socket, connected: false, address: nil)
+        socket = assign(socket, connected: false, address: nil, chainId: nil, balance: nil)
+
+        socket = assign(socket, supporting: "")
 
         IO.inspect(channel.id, label: "channel-id")
         if connected?(socket), do: PapricaWeb.Endpoint.subscribe("channel-updated:#{channel.id}")
@@ -60,6 +62,7 @@ defmodule PapricaWeb.StreamLive do
           socket =
             socket
             |> assign(channel: channel)
+            |> assign(socket, supporting: "")
             |> assign(playback_url: "")
 
           {:ok, socket}
@@ -71,54 +74,93 @@ defmodule PapricaWeb.StreamLive do
 
   def render(assigns) do
     ~H"""
-    <span id="metamask" phx-hook="Metamask">
-      <%= if @connected do %>
-        <span>My account</span>: <span><%= @address %></span>
-      <% else %>
-        <.button phx-click="connect-wallet">
-          <span>Connect</span>
-        </.button>
-      <% end %>
-    </span>
-    <br/><br/>
-    <div class="flex gap-4">
+    <div class="flex gap-8 mx-16">
       <div class="flex-1">
-        <div class="page-channel">
-          <div class="channel-show-active">
-            <div class="mt-5">
-              <div class="row">
-                <div class="col-sm-12 mux-video-cols">
-                  <div class="mux-video-contain">
-                    <div class="mux-tv-set">
-                      <%= if @playback_url != "" do %>
-                        <mux-player
-                          stream-type="live"
-                          playback-id={@playback_url}
-                          metadata-video-title="Test video title"
-                          metadata-viewer-user-id="user-id-007"
-                        ></mux-player>
-                      <% end %>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <div class="w-full mt-4">
+        <%= if @playback_url != "" do %>
+          <mux-player
+            stream-type="live"
+            playback-id={@playback_url}
+            metadata-video-title="Test video title"
+            metadata-viewer-user-id="user-id-007"
+          ></mux-player>
+        <% end %>
+        <div class="mt-4 font-bold">Support (min: 0.01 ETH)</div>
+          <form phx-submit="support-creator">
+            <div class="flex">
+              <input
+                name="supporting"
+                class="w-full rounded border-zinc-300 text-zinc-900"
+                type="number"
+                step="0.01"
+                value={@supporting}
+                phx-debounce="1000"
+              />
+              <.button
+                class="ml-4 rounded p-4 text-white-100 bg-black"
+              >
+                💓
+              </.button>
             </div>
+          </form>
+        </div>
+
+        <%!-- <form phx-submit="search" phx-change="search">
+        <input
+          type="text"
+          name="airport"
+          value={@airport}
+          placeholder="Airport Code"
+          autofocus
+          autocomplete="off"
+          readonly={@loading}
+          list="matches"
+          phx-debounce="1000"
+        />
+
+        <button>
+          <img src="/images/search.svg" />
+        </button>
+        </form> --%>
+
+      </div>
+      <div class="flex-1 p-4">
+        <div>
+          <span id="metamask" phx-hook="Metamask">
+            <%= if @connected do %>
+              <div>
+                <span>chainId</span>: <span><%= @chainId %></span>
+              </div>
+              <div>
+                <span>My account</span>: <span><%= @address %></span>
+              </div>
+              <div>
+                <span>balance</span>: <span><%= @balance %> ETH</span>
+              </div>
+            <% else %>
+              <.button phx-click="connect-wallet">
+                <span>Connect</span>
+              </.button>
+            <% end %>
+          </span>
+        </div>
+        <hr class="my-4" />
+        <div>
+          <div>
+            <div class="font-bold">Participants</div>
+            <ul>
+              <li :for={{address, _meta} <- @presences}>
+                <span>- <%= address %></span>
+              </li>
+            </ul>
           </div>
         </div>
-        <div>
-          <div>Who's here?</div>
-          <ul>
-            <li :for={{address, _meta} <- @presences}>
-              <span><%= address %></span>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div class="flex-1">
+        <hr class="my-4" />
+        <div class="font-bold">Messages</div>
         <div
           id="messages_container"
           phx-hook="ScrollToBottom"
-          class="p-6 bg-white border rounded shadow max-h-96 overflow-y-auto"
+          class="max-h-96 overflow-y-auto bg-slate-50 p-2 mt-4"
         >
           <%= for message <- @messages do %>
             <b class="text-blue-500"><%= shorten_hex(message.address) %></b> <%= message.text %> <br />
@@ -138,12 +180,10 @@ defmodule PapricaWeb.StreamLive do
                 autocomplete="off"
                 autofocus="true"
               />
-              <%!-- <.input field={@form[:country]} placeholder="Come on!" autocomplete="off" />
-              <.input field={@form[:address]} placeholder="Come on!" autocomplete="off" /> --%>
             </div>
             <div class="bg-red mt-2 ml-2">
               <.button>
-                Send
+              💬
               </.button>
             </div>
           </div>
@@ -187,7 +227,6 @@ defmodule PapricaWeb.StreamLive do
     Porcelain.spawn("ffmpeg", ffmpeg_args ++ ["rtmps://global-live.mux.com/app/#{key}"])
   end
 
-  @impl true
   def handle_event("video_data", %{"data" => "data:video/x-matroska;codecs=avc1,opus;base64," <> data}, socket) do
     Porcelain.Process.send_input(socket.assigns.porcelain_process, Base.decode64!(data))
 
@@ -241,44 +280,50 @@ defmodule PapricaWeb.StreamLive do
     {:noreply, socket}
   end
 
-  defp remove_presences(socket, leaves) do
-    user_ids = Enum.map(leaves, fn {user_id, _} -> user_id end)
-
-    presences = Map.drop(socket.assigns.presences, user_ids)
-
-    assign(socket, :presences, presences)
-  end
-
-  defp add_presences(socket, joins) do
-    presences = Map.merge(socket.assigns.presences, simple_presence_map(joins))
-    assign(socket, :presences, presences)
-  end
-
-  def handle_event("wallet-connected", %{"address" => address}, socket) do
-    IO.inspect(address, label: "wallet-connected")
-
-    {:ok, _} =
-      Presence.track(self(), @topic, address, %{
-        address: address
-        # is_playing: false
-      })
-
-      IO.inspect(address, label: "wallet-connected2")
-
-    presences = Presence.list(@topic)
-    socket = assign(socket, :presences, presences)
-
-    IO.inspect(presences, label: "wallet-presences")
-
-    message = Map.new()
-      |> Map.put("text", "Welcome, " <> address)
-    Messages.create_message(message)
-
-    {:noreply, assign(socket, connected: true, address: address)}
+  def handle_event("support-creator", %{"supporting" => supporting}, socket) do
+    if supporting do
+      {:noreply, push_event(socket, "support", %{"supporting" => supporting})}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("connect-wallet", _params, socket) do
     {:noreply, push_event(socket, "connect-wallet", %{})}
+  end
+
+  def handle_event("wallet-connected", params, socket) do
+    address = params["address"]
+
+    {:ok, _} =
+      Presence.track(self(), @topic, address, %{
+        address: address
+      })
+
+    presences = Presence.list(@topic)
+    socket = assign(socket, :presences, presences)
+
+    message = Map.new()
+      |> Map.put("text", "Welcome 🤚, " <> address)
+    Messages.create_message(message)
+
+    {:noreply, assign(
+      socket,
+      connected: true,
+      address: address,
+      chainId: params["chainId"],
+      balance: params["balance"]
+    )}
+  end
+
+  def handle_event("eth-sent", params, socket) do
+    balance = params["balance"]
+    message = Map.new()
+      |> Map.put("text", params["message"])
+
+    Messages.create_message(message)
+
+    {:noreply, assign(socket, balance: balance)}
   end
 
   def simple_presence_map(presences) do
@@ -293,5 +338,18 @@ defmodule PapricaWeb.StreamLive do
       "" -> ""
       _ -> String.slice(hex, 0, 5) <> "..." <> String.slice(hex, -6, 4) <> ": "
     end
+  end
+
+  defp remove_presences(socket, leaves) do
+    user_ids = Enum.map(leaves, fn {user_id, _} -> user_id end)
+
+    presences = Map.drop(socket.assigns.presences, user_ids)
+
+    assign(socket, :presences, presences)
+  end
+
+  defp add_presences(socket, joins) do
+    presences = Map.merge(socket.assigns.presences, simple_presence_map(joins))
+    assign(socket, :presences, presences)
   end
 end
