@@ -12,6 +12,7 @@ const mockERC721Abi = [
 
   // Send some of your tokens to someone else
   "function mintAndCreateAccount(uint tokenId)",
+  "function mint(address to, uint256 tokenId)",
 ];
 
 // The Contract object
@@ -68,12 +69,12 @@ export const Metamask = {
         value: ethers.utils.parseEther(supporting, "ether").toString(),
       };
       const tx = await signer.sendTransaction(obj);
-      const receipt = await tx.wait();
+      await tx.wait();
 
       const address = await signer.getAddress();
       const balance = await web3Provider.getBalance(address);
 
-      const message = `${address} sent ${supporting} ETH! 🥳`;
+      const message = `🥳 ${address} sent ${supporting} ETH!`;
 
       this.pushEvent("eth-sent", {
         message: message,
@@ -81,6 +82,19 @@ export const Metamask = {
       });
     });
 
-    // mockERC721.connect(signer).mintAndCreateAccount(0);
+    window.addEventListener("phx:mint-nft", async (e) => {
+      const address = await signer.getAddress();
+      console.log(address);
+
+      const tx = await mockERC721.connect(signer).mint(address, 101);
+      // const tx = await mockERC721.connect(signer).mintAndCreateAccount(100);
+      await tx.wait();
+
+      const message = `🎉 Now ${address} is your fan!`;
+
+      this.pushEvent("fan-registered", {
+        message: message,
+      });
+    });
   },
 };

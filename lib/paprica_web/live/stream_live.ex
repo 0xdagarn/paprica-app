@@ -55,6 +55,7 @@ defmodule PapricaWeb.StreamLive do
             |> assign(stream_key: channel.stream_key)
             |> assign(playback_url: playback_url)
             |> assign(porcelain_process: "")
+            |> assign(selectedAddress: "")
           IO.inspect("test", label: "assigned")
 
           {:ok, socket}
@@ -64,6 +65,7 @@ defmodule PapricaWeb.StreamLive do
             |> assign(channel: channel)
             |> assign(socket, supporting: "")
             |> assign(playback_url: "")
+            |> assign(selectedAddress: "")
 
           {:ok, socket}
         end
@@ -74,19 +76,24 @@ defmodule PapricaWeb.StreamLive do
 
   def render(assigns) do
     ~H"""
-    <div class="flex gap-8 mx-16">
-      <div class="flex-1">
-        <div class="w-full mt-4">
-        <%= if @playback_url != "" do %>
-          <mux-player
-            stream-type="live"
-            playback-id={@playback_url}
-            metadata-video-title="Test video title"
-            metadata-viewer-user-id="user-id-007"
-          ></mux-player>
-        <% end %>
-        <div class="mt-4 font-bold">Support (min: 0.01 ETH)</div>
-          <form phx-submit="support-creator">
+    <.modal id="account-modal">
+      <div class="flex gap-8">
+        <div class="flex-1">
+          <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwMCIgaGVpZ2h0PSIxMDAwIiB2aWV3Qm94PSIwIDAgMTAwMCAxMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjEwMDAiIGZpbGw9ImhzbCgyMDAsIDc4JSwgNTYlKSIvPjx0ZXh0IHg9IjgwIiB5PSIyNzYiIGZpbGw9IndoaXRlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhIiBmb250LXNpemU9IjEzMCIgZm9udC13ZWlnaHQ9ImJvbGQiPkZhbiAjMDwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNDI1IiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSIgZm9udC1zaXplPSIxMzAiIGZvbnQtd2VpZ2h0PSJib2xkIj4gY29udGFpbnMgPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI1NzQiIGZpbGw9IndoaXRlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhIiBmb250LXNpemU9IjEzMCIgZm9udC13ZWlnaHQ9ImJvbGQiPjIwMCBUb2tlbnM8L3RleHQ+PC9zdmc+"/>
+        </div>
+        <div class="flex-1 mt-40">
+          <div>
+            <span>- account</span>
+            <span>: <%= shorten_hex_not_colon("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC") %></span>
+          </div>
+          <div>
+            <span>- balance</span>
+            <span>: 200 tokens</span>
+          </div>
+          <div class="flex flex-col justify-between">
+            <div>
+              <hr class="my-4" />
+            </div>
             <div class="flex">
               <input
                 name="supporting"
@@ -99,31 +106,47 @@ defmodule PapricaWeb.StreamLive do
               <.button
                 class="ml-4 rounded p-4 text-white-100 bg-black"
               >
-                💓
+                ❣️
               </.button>
             </div>
-          </form>
+          </div>
         </div>
-
-        <%!-- <form phx-submit="search" phx-change="search">
-        <input
-          type="text"
-          name="airport"
-          value={@airport}
-          placeholder="Airport Code"
-          autofocus
-          autocomplete="off"
-          readonly={@loading}
-          list="matches"
-          phx-debounce="1000"
-        />
-
-        <button>
-          <img src="/images/search.svg" />
-        </button>
-        </form> --%>
-
       </div>
+    </.modal>
+    <div class="flex gap-8 mx-16">
+      <div class="flex-1">
+        <div class="w-full mt-4">
+          <%= if @playback_url != "" do %>
+          <mux-player
+            stream-type="live"
+            playback-id={@playback_url}
+            metadata-video-title="Test video title"
+            metadata-viewer-user-id="user-id-007"
+          ></mux-player>
+          <% end %>
+          <div class="mt-4 font-bold">Support (min: 0.01 ETH)</div>
+            <form phx-submit="support-creator">
+              <div class="flex">
+                <input
+                  name="supporting"
+                  class="w-full rounded border-zinc-300 text-zinc-900"
+                  type="number"
+                  step="0.01"
+                  value={@supporting}
+                  phx-debounce="1000"
+                />
+                <.button
+                  class="ml-4 rounded p-4 text-white-100 bg-black"
+                >
+                  💓
+                </.button>
+              </div>
+            </form>
+          </div>
+          <.button class="w-full mt-4" phx-click="mint-nft">
+            Minting a NFT to be a fan
+          </.button>
+        </div>
       <div class="flex-1 p-4">
         <div>
           <span id="metamask" phx-hook="Metamask">
@@ -132,7 +155,7 @@ defmodule PapricaWeb.StreamLive do
                 <span>chainId</span>: <span><%= @chainId %></span>
               </div>
               <div>
-                <span>My account</span>: <span><%= @address %></span>
+                <span>account</span>: <span><%= @address %></span>
               </div>
               <div>
                 <span>balance</span>: <span><%= @balance %> ETH</span>
@@ -163,7 +186,16 @@ defmodule PapricaWeb.StreamLive do
           class="max-h-96 overflow-y-auto bg-slate-50 p-2 mt-4"
         >
           <%= for message <- @messages do %>
-            <b class="text-blue-500"><%= shorten_hex(message.address) %></b> <%= message.text %> <br />
+            <b
+              id={to_string(message.id)}
+              class="hover:cursor-pointer hover:underline"
+              phx-click={show_modal("account-modal")}
+            >
+              <%= shorten_hex(message.address) %>
+            </b>
+            <span class="text-sm">
+              <%= message.text %> <br />
+            </span>
           <% end %>
         </div>
 
@@ -280,6 +312,10 @@ defmodule PapricaWeb.StreamLive do
     {:noreply, socket}
   end
 
+  def handle_event("mint-nft", _params, socket) do
+    {:noreply, push_event(socket, "mint-nft", %{})}
+  end
+
   def handle_event("support-creator", %{"supporting" => supporting}, socket) do
     if supporting do
       {:noreply, push_event(socket, "support", %{"supporting" => supporting})}
@@ -304,7 +340,7 @@ defmodule PapricaWeb.StreamLive do
     socket = assign(socket, :presences, presences)
 
     message = Map.new()
-      |> Map.put("text", "Welcome 🤚, " <> address)
+      |> Map.put("text", "🤚 Welcome, " <> address)
     Messages.create_message(message)
 
     {:noreply, assign(
@@ -326,6 +362,15 @@ defmodule PapricaWeb.StreamLive do
     {:noreply, assign(socket, balance: balance)}
   end
 
+  def handle_event("fan-registered", params, socket) do
+    message = Map.new()
+      |> Map.put("text", params["message"])
+
+    Messages.create_message(message)
+
+    {:noreply, socket}
+  end
+
   def simple_presence_map(presences) do
     Enum.into(presences, %{}, fn {user_id, %{metas: [meta | _]}} ->
       {user_id, meta}
@@ -337,6 +382,14 @@ defmodule PapricaWeb.StreamLive do
       nil -> ""
       "" -> ""
       _ -> String.slice(hex, 0, 5) <> "..." <> String.slice(hex, -6, 4) <> ": "
+    end
+  end
+
+  def shorten_hex_not_colon(hex) do
+    case hex do
+      nil -> ""
+      "" -> ""
+      _ -> String.slice(hex, 0, 5) <> "..." <> String.slice(hex, -6, 4)
     end
   end
 
