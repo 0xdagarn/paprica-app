@@ -83,7 +83,7 @@ defmodule Paprica.Channels do
   end
 
   def notify_subs({:ok, channel}) do
-    Phoenix.PubSub.broadcast(Snitch.PubSub, "channel-updated:#{channel.id}", channel)
+    Phoenix.PubSub.broadcast(Paprica.PubSub, "channel-updated:#{channel.id}", channel)
     {:ok, channel}
   end
 
@@ -106,23 +106,35 @@ defmodule Paprica.Channels do
         attrs
       end
 
+    IO.inspect(attrs, label: "update_from_mux_webhook")
     update_channel(channel, attrs)
   end
 
   def playback_url_for_channel(%Channel{} = channel) do
-    case channel.mux_resource["status"] do
-      "active" ->
-        case channel.mux_live_playback_id do
-          nil ->
-            nil
+    IO.inspect(channel, label: "playback_url_for_channel")
 
-          playback_id ->
-            "https://stream.mux.com/#{playback_id}.m3u8"
-        end
+    case channel.mux_live_playback_id do
+      nil ->
+        ""
 
-      _ ->
-        nil
+      playback_id ->
+        # "https://stream.mux.com/#{playback_id}.m3u8"
+        playback_id
     end
+
+    # case channel.mux_resource["status"] do
+    #   "idle" ->
+    #     case channel.mux_live_playback_id do
+    #       nl ->
+    #         nil
+
+    #       playback_id ->
+    #         "https://stream.mux.com/#{playback_id}.m3u8"
+    #     end
+
+    #   _ ->
+    #     nil
+    # end
   end
 
   @doc """
