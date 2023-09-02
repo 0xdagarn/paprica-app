@@ -14,6 +14,8 @@ defmodule Paprica.Application do
       Paprica.Repo,
       # Start the PubSub system
       {Phoenix.PubSub, name: Paprica.PubSub},
+      # Start the Presence system
+      PapricaWeb.Presence,
       # Start Finch
       {Finch, name: Paprica.Finch},
       # Start the Endpoint (http/https)

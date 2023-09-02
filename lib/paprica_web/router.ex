@@ -18,12 +18,17 @@ defmodule PapricaWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    live "/channel", ChannelLive
+    live "/channel/:slug", StreamLive
+    live "/messages/:address", MessagesLive
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", PapricaWeb do
-  #   pipe_through :api
-  # end
+  scope "/", PapricaWeb do
+    pipe_through :api
+
+    post "/webhooks/mux", WebhookController, :mux
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:paprica, :dev_routes) do

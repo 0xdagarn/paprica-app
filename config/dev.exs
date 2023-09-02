@@ -29,6 +29,10 @@ config :paprica, PapricaWeb.Endpoint,
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
 
+config :mux,
+  access_token_id: "b2e7fa13-9bd4-4519-aef7-770bf14e25df",
+  access_token_secret: "k95xRi9r7BRhiZAbx5WpDcMb6gkBpculiFGQAH2HaAbcv/P4rtS69ZCO5HlkttsXNhub0yCOa62"
+
 # ## SSL Support
 #
 # In order to use HTTPS in development, a self-signed

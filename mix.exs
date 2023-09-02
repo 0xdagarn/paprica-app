@@ -49,7 +49,9 @@ defmodule Paprica.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
+      {:porcelain, "~> 2.0.3"},
       {:plug_cowboy, "~> 2.5"},
+      {:plug, "~> 1.3"},
       {:mux, "~> 1.4.0"},
       {:slugger, "~> 0.3"}
     ]
