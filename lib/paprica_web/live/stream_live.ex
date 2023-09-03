@@ -51,7 +51,6 @@ defmodule PapricaWeb.StreamLive do
             |> assign(channel: channel)
             |> assign(slug: channel.slug)
             |> assign(status: channel.mux_resource["status"])
-            |> assign(connected: channel.mux_resource["connected"])
             |> assign(stream_key: channel.stream_key)
             |> assign(playback_url: playback_url)
             |> assign(porcelain_process: "")

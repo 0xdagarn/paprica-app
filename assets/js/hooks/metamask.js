@@ -37,17 +37,24 @@ const mockERC721 = new ethers.Contract(
   web3Provider
 );
 
+let tokenBalance = ethers.BigNumber.from(0);
+
 export const Metamask = {
   mounted() {
     const signer = web3Provider.getSigner();
 
     window.addEventListener("load", async () => {
       const address = await signer.getAddress();
-      const balance = await web3Provider.getBalance(address);
-      const tokenBalance = await mockERC20.balanceOf(tba);
-      const tokenURI = await mockERC721.tokenURI(0);
 
-      if (address)
+      let tokenURI = "";
+
+      if (address) {
+        const balance = await web3Provider.getBalance(address);
+        try {
+          tokenBalance = await mockERC20.balanceOf(tba);
+          tokenURI = await mockERC721.tokenURI(0);
+          console.log(tokenURI);
+        } catch (err) {}
         this.pushEvent("wallet-connected", {
           address: address,
           balance: ethers.utils.formatEther(balance),
@@ -56,8 +63,10 @@ export const Metamask = {
             parseFloat(
               ethers.utils.formatEther(tokenBalance.toString()).toString()
             ) / 1.0,
-          tokenURI: JSON.parse(atob(tokenURI.slice(29))).image,
+          tokenURI:
+            tokenURI !== "" ? JSON.parse(atob(tokenURI.slice(29))).image : "",
         });
+      }
     });
 
     window.addEventListener("phx:connect-wallet", async (e) => {
@@ -66,24 +75,31 @@ export const Metamask = {
       });
       if (accounts.length > 0) {
         const address = accounts[0];
-        const balance = await web3Provider.getBalance(address);
-        const tokenBalance = await mockERC20.balanceOf(tba);
-        const tokenURI = await mockERC721.tokenURI(0);
 
-        // console.log("test", ethers.utils.parseUnits(tokenBalance, "ether"));
+        if (address) {
+          const balance = await web3Provider.getBalance(address);
+          console.log("2");
 
-        console.log(JSON.parse(atob(tokenURI.slice(29))).image);
+          let tokenURI = "";
+          try {
+            tokenBalance = await mockERC20.balanceOf(tba);
+            tokenURI = await mockERC721.tokenURI(0);
+          } catch (err) {}
 
-        this.pushEvent("wallet-connected", {
-          address: address,
-          balance: ethers.utils.formatEther(balance),
-          chainId: web3Provider.network.chainId,
-          tokenBalance:
-            parseFloat(
-              ethers.utils.formatEther(tokenBalance.toString()).toString()
-            ) / 1.0,
-          tokenURI: JSON.parse(atob(tokenURI.slice(29))).image,
-        });
+          // console.log("test", ethers.utils.parseUnits(tokenBalance, "ether"));
+
+          this.pushEvent("wallet-connected", {
+            address: address,
+            balance: ethers.utils.formatEther(balance),
+            chainId: web3Provider.network.chainId,
+            tokenBalance:
+              parseFloat(
+                ethers.utils.formatEther(tokenBalance.toString()).toString()
+              ) / 1.0,
+            tokenURI:
+              tokenURI !== "" ? JSON.parse(atob(tokenURI.slice(29))).image : "",
+          });
+        }
       }
     });
 
@@ -134,8 +150,12 @@ export const Metamask = {
 
       const message = `🥳 ${tba} receives ${supporting} fan tokens!`;
 
-      const tokenBalance = await mockERC20.balanceOf(tba);
-      const tokenURI = await mockERC721.tokenURI(0);
+      let tokenURI = "";
+      console.log("3");
+      try {
+        tokenBalance = await mockERC20.balanceOf(tba);
+        tokenURI = await mockERC721.tokenURI(0);
+      } catch (err) {}
 
       this.pushEvent("token-received", {
         message: message,
@@ -143,7 +163,8 @@ export const Metamask = {
           parseFloat(
             ethers.utils.formatEther(tokenBalance.toString()).toString()
           ) / 1.0,
-        tokenURI: JSON.parse(atob(tokenURI.slice(29))).image,
+        tokenURI:
+          tokenURI !== "" ? JSON.parse(atob(tokenURI.slice(29))).image : "",
       });
     });
 
