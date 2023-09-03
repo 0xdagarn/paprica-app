@@ -56,6 +56,8 @@ defmodule PapricaWeb.StreamLive do
             |> assign(playback_url: playback_url)
             |> assign(porcelain_process: "")
             |> assign(selectedAddress: "")
+            |> assign(tokenBalance: "")
+            |> assign(tokenURI: "")
           IO.inspect("test", label: "assigned")
 
           {:ok, socket}
@@ -66,6 +68,8 @@ defmodule PapricaWeb.StreamLive do
             |> assign(socket, supporting: "")
             |> assign(playback_url: "")
             |> assign(selectedAddress: "")
+            |> assign(tokenBalance: "")
+            |> assign(tokenURI: "")
 
           {:ok, socket}
         end
@@ -79,36 +83,38 @@ defmodule PapricaWeb.StreamLive do
     <.modal id="account-modal">
       <div class="flex gap-8">
         <div class="flex-1">
-          <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwMCIgaGVpZ2h0PSIxMDAwIiB2aWV3Qm94PSIwIDAgMTAwMCAxMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjEwMDAiIGZpbGw9ImhzbCgyMDAsIDc4JSwgNTYlKSIvPjx0ZXh0IHg9IjgwIiB5PSIyNzYiIGZpbGw9IndoaXRlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhIiBmb250LXNpemU9IjEzMCIgZm9udC13ZWlnaHQ9ImJvbGQiPkZhbiAjMDwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNDI1IiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSIgZm9udC1zaXplPSIxMzAiIGZvbnQtd2VpZ2h0PSJib2xkIj4gY29udGFpbnMgPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI1NzQiIGZpbGw9IndoaXRlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhIiBmb250LXNpemU9IjEzMCIgZm9udC13ZWlnaHQ9ImJvbGQiPjIwMCBUb2tlbnM8L3RleHQ+PC9zdmc+"/>
+          <img src={@tokenURI}/>
         </div>
         <div class="flex-1 mt-40">
           <div>
-            <span>- account</span>
-            <span>: <%= shorten_hex_not_colon("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC") %></span>
+            <span>- token-bound account</span>
+            <span>: <%= shorten_hex_not_colon("0x9f3E42eCBC13662966e104f8862D0588471A3Ef6") %></span>
           </div>
           <div>
             <span>- balance</span>
-            <span>: 200 tokens</span>
+            <span>: <%= @tokenBalance %> tokens</span>
           </div>
           <div class="flex flex-col justify-between">
             <div>
               <hr class="my-4" />
             </div>
-            <div class="flex">
-              <input
-                name="supporting"
-                class="w-full rounded border-zinc-300 text-zinc-900"
-                type="number"
-                step="0.01"
-                value={@supporting}
-                phx-debounce="1000"
-              />
-              <.button
-                class="ml-4 rounded p-4 text-white-100 bg-black"
-              >
-                ❣️
-              </.button>
-            </div>
+            <form phx-submit="support-fan">
+              <div class="flex">
+                <input
+                  name="supporting"
+                  class="w-full rounded border-zinc-300 text-zinc-900"
+                  type="number"
+                  step="0.01"
+                  value={@supporting}
+                  phx-debounce="1000"
+                />
+                <.button
+                  class="ml-4 rounded p-4 text-white-100 bg-black"
+                >
+                  ❣️
+                </.button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -324,6 +330,14 @@ defmodule PapricaWeb.StreamLive do
     end
   end
 
+  def handle_event("support-fan", %{"supporting" => supporting}, socket) do
+    if supporting do
+      {:noreply, push_event(socket, "support-fan", %{"supporting" => supporting, "receiver" => "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc"})}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("connect-wallet", _params, socket) do
     {:noreply, push_event(socket, "connect-wallet", %{})}
   end
@@ -348,8 +362,19 @@ defmodule PapricaWeb.StreamLive do
       connected: true,
       address: address,
       chainId: params["chainId"],
-      balance: params["balance"]
+      balance: params["balance"],
+      tokenBalance: params["tokenBalance"],
+      tokenURI: params["tokenURI"]
     )}
+  end
+
+  def handle_event("token-received", params, socket) do
+    message = Map.new()
+      |> Map.put("text", params["message"])
+
+    Messages.create_message(message)
+
+    {:noreply, assign(socket, tokenBalance: params["tokenBalance"], tokenURI: params["tokenURI"])}
   end
 
   def handle_event("eth-sent", params, socket) do
